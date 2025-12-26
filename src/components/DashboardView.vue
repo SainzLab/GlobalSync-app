@@ -1,28 +1,29 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import NeoClock from './NeoClock.vue';
 
 const props = defineProps({
   searchQuery: String,
-  currentTime: Date
+  citiesData: {
+    type: Array,
+    required: true,
+    default: () => []
+  }
 });
 
-const cities = ref([
-  { id: 1, city: 'Jakarta', zone: 'Asia/Jakarta', offset: '+0H' },
-  { id: 2, city: 'Makassar', zone: 'Asia/Makassar', offset: '+1H' },
-  { id: 3, city: 'Jayapura', zone: 'Asia/Jayapura', offset: '+2H' },
-  { id: 4, city: 'London', zone: 'Europe/London', offset: '-7H' },
-  { id: 5, city: 'New York', zone: 'America/New_York', offset: '-12H' },
-  { id: 6, city: 'San Francisco', zone: 'America/Los_Angeles', offset: '-15H' },
-  { id: 7, city: 'Tokyo', zone: 'Asia/Tokyo', offset: '+2H' },
-  { id: 8, city: 'Dubai', zone: 'Asia/Dubai', offset: '-3H' },
-]);
-
 const filteredCities = computed(() => {
-  if (!props.searchQuery) return cities.value;
-  return cities.value.filter(item => 
-    item.city.toLowerCase().includes(props.searchQuery.toLowerCase())
-  );
+  if (!props.searchQuery) return props.citiesData;
+  
+  const query = props.searchQuery.toLowerCase();
+  
+  return props.citiesData.filter(item => {
+
+    const matchCity = item.city.toLowerCase().includes(query);
+    const matchCountry = item.country.toLowerCase().includes(query);
+    const matchKeywords = item.keywords.some(k => k.toLowerCase().includes(query));
+    
+    return matchCity || matchCountry || matchKeywords;
+  });
 });
 </script>
 
@@ -33,12 +34,18 @@ const filteredCities = computed(() => {
       :key="city.id"
       class="grid-item"
     >
-      <NeoClock v-bind="city" :time="currentTime" />
+      <NeoClock 
+        :time="city.time"
+        :timezone="city.zone"
+        :city="city.city"
+        :offset="city.offset"
+      />
     </div>
 
     <div v-if="filteredCities.length === 0" class="no-result">
-      <p>SIGNAL LOST</p>
-      <small>City "{{ searchQuery }}" not found.</small>
+      <div class="alert-icon">!</div>
+      <p>NO SIGNAL DETECTED</p>
+      <small>Target "{{ searchQuery }}" is out of range.</small>
     </div>
   </div>
 </template>
@@ -57,11 +64,29 @@ const filteredCities = computed(() => {
 
 .no-result {
   grid-column: 1 / -1;
-  text-align: center;
-  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
   color: #ea580c;
-  border: 1px dashed #333;
-  border-radius: 12px;
+  border: 1px dashed rgba(234, 88, 12, 0.3);
+  border-radius: 16px;
+  background: rgba(234, 88, 12, 0.05);
+  margin-top: 2rem;
+}
+
+.alert-icon {
+  font-size: 2rem; font-weight: bold; margin-bottom: 1rem;
+  width: 50px; height: 50px; border-radius: 50%; border: 2px solid #ea580c;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.no-result p {
+  font-weight: 800; letter-spacing: 2px; margin: 0; font-size: 1.2rem;
+}
+.no-result small {
+  color: #666; margin-top: 0.5rem; font-family: monospace;
 }
 
 @media (min-width: 1024px) {
@@ -70,13 +95,6 @@ const filteredCities = computed(() => {
     gap: 2.5rem; 
     padding-top: 3rem;
     padding-bottom: 4rem;
-  }
-}
-
-@media (min-width: 1600px) {
-  .dashboard-grid {
-    transform: scale(1.1); 
-    margin-top: 2rem;
   }
 }
 </style>
